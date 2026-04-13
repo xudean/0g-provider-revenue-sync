@@ -43,6 +43,17 @@ function getProviderDisplayName(provider) {
   return provider.model_name || formatAddress(provider.provider_address);
 }
 
+function formatBucketRange(timestampMs, bucketMinutes) {
+  const start = new Date(timestampMs);
+  const end = new Date(timestampMs + (bucketMinutes * 60 * 1000) - (60 * 1000));
+  const formatter = new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+  return `${formatter.format(start)} - ${formatter.format(end)}`;
+}
+
 async function fetchJson(url, options) {
   const response = await fetch(url, options);
   const body = await response.text();
@@ -254,7 +265,7 @@ function App() {
             const provider = providerMap.get(addr);
             return `${param.marker}${getProviderDisplayName(provider)}: <strong>${formatWeiToOg(value, 6)}</strong>`;
           });
-          return [`<div>${new Date(params[0]?.value?.[0] || 0).toLocaleString()}</div>`, ...lines].join("<br/>");
+          return [`<div>${formatBucketRange(params[0]?.value?.[0] || 0, bucketMinutes)}</div>`, ...lines].join("<br/>");
         }
       },
       xAxis: {
@@ -272,7 +283,7 @@ function App() {
       },
       series
     };
-  }, [filteredProviders, revenueSeries]);
+  }, [bucketMinutes, filteredProviders, revenueSeries]);
 
   const chartRef = useEChart(chartOption);
 
