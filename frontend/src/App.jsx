@@ -43,6 +43,13 @@ function getProviderDisplayName(provider) {
   return provider.model_name || formatAddress(provider.provider_address);
 }
 
+function formatTimestamp(unixSeconds) {
+  if (!unixSeconds) {
+    return "-";
+  }
+  return new Date(Number(unixSeconds) * 1000).toLocaleString();
+}
+
 function formatBucketRange(timestampMs, bucketMinutes) {
   const end = new Date(timestampMs);
   const start = new Date(timestampMs - ((bucketMinutes - 1) * 60 * 1000));
@@ -165,6 +172,20 @@ function App() {
   const inferenceTopProviders = useMemo(() => {
     return topProviders.filter((item) => item.service_kind === "inference");
   }, [topProviders]);
+
+  const selectedProviderStats = useMemo(() => {
+    if (!providerAddress) {
+      return null;
+    }
+    return inferenceTopProviders.find((item) => item.provider_address === providerAddress) || null;
+  }, [inferenceTopProviders, providerAddress]);
+
+  const visibleTopProviders = useMemo(() => {
+    if (!providerAddress) {
+      return inferenceTopProviders;
+    }
+    return inferenceTopProviders.filter((item) => item.provider_address === providerAddress);
+  }, [inferenceTopProviders, providerAddress]);
 
   async function refresh() {
     setLoading(true);
@@ -332,28 +353,57 @@ function App() {
         </section>
 
         <section className="metrics">
-          <MetricCard
-            label="Inference Providers"
-            value={providerCountMap.inference ?? 0}
-            detail="当前链上 inference provider 数量"
-          />
-          <MetricCard
-            label="Inference Revenue"
-            value={formatWeiToOg(revenueMap.inference || "0", 6)}
-            detail="按 settlement_cycles 聚合"
-          />
-          <MetricCard
-            label="Tracked Start Block"
-            value={status?.dbStatus?.startBlock ?? "-"}
-            detail="数据起始区块号"
-            tone="cool"
-          />
-          <MetricCard
-            label="Latest Synced Block"
-            value={status?.dbStatus?.latestSynced?.inference ?? "-"}
-            detail="Inference settlement 已同步到的最新区块"
-            tone="cool"
-          />
+          {selectedProvider ? (
+            <>
+              <MetricCard
+                label="Selected Provider"
+                value={getProviderDisplayName(selectedProvider)}
+                detail={formatAddress(selectedProvider.provider_address)}
+              />
+              <MetricCard
+                label="Selected Revenue"
+                value={formatWeiToOg(selectedProviderStats?.total_revenue || "0", 6)}
+                detail="当前 provider 累计收益"
+              />
+              <MetricCard
+                label="Settlement Cycles"
+                value={selectedProviderStats?.cycle_count ?? 0}
+                detail="当前 provider 结算次数"
+                tone="cool"
+              />
+              <MetricCard
+                label="Last Seen"
+                value={formatTimestamp(selectedProviderStats?.last_seen)}
+                detail="当前 provider 最近结算时间"
+                tone="cool"
+              />
+            </>
+          ) : (
+            <>
+              <MetricCard
+                label="Inference Providers"
+                value={providerCountMap.inference ?? 0}
+                detail="当前链上 inference provider 数量"
+              />
+              <MetricCard
+                label="Inference Revenue"
+                value={formatWeiToOg(revenueMap.inference || "0", 6)}
+                detail="按 settlement_cycles 聚合"
+              />
+              <MetricCard
+                label="Tracked Start Block"
+                value={status?.dbStatus?.startBlock ?? "-"}
+                detail="数据起始区块号"
+                tone="cool"
+              />
+              <MetricCard
+                label="Latest Synced Block"
+                value={status?.dbStatus?.latestSynced?.inference ?? "-"}
+                detail="Inference settlement 已同步到的最新区块"
+                tone="cool"
+              />
+            </>
+          )}
         </section>
 
         {error ? <div className="error-banner">{error}</div> : null}
@@ -414,7 +464,7 @@ function App() {
             <div className="panel__header">
               <div>
                 <div className="panel__eyebrow">Leaderboard</div>
-                <h2>Top Inference Providers</h2>
+                <h2>{selectedProvider ? "Selected Inference Provider" : "Top Inference Providers"}</h2>
               </div>
             </div>
             <div className="table-shell">
@@ -429,7 +479,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {inferenceTopProviders.map((item) => (
+                  {visibleTopProviders.map((item) => (
                     <tr key={item.provider_address}>
                       <td>inference</td>
                       <td title={item.provider_address}>{formatAddress(item.provider_address)}</td>
