@@ -3,6 +3,8 @@ import * as echarts from "echarts";
 
 const DEFAULT_REFRESH_MS = 60000;
 const COLORS = ["#da5a35", "#186f65", "#2647c8", "#c78a1a", "#8b3fb1", "#db2f6e", "#2075b8", "#4e7f11"];
+const PRIMUS_PROVIDER_ADDRESS = "0x25f8f01ca76060ea40895472b1b79f76613ca497";
+const PRIMUS_PROVIDER_COLOR = "#0f9d7a";
 
 function formatAddress(value) {
   if (!value) {
@@ -41,6 +43,27 @@ function getProviderDisplayName(provider) {
     return "-";
   }
   return provider.model_name || formatAddress(provider.provider_address);
+}
+
+function isPrimusProvider(address) {
+  return String(address || "").toLowerCase() === PRIMUS_PROVIDER_ADDRESS;
+}
+
+function getProviderOptionLabel(provider) {
+  if (!provider) {
+    return "-";
+  }
+  if (isPrimusProvider(provider.provider_address)) {
+    return `${provider.provider_address} · Owned by Primus`;
+  }
+  return provider.provider_address;
+}
+
+function getProviderSeriesColor(address, index) {
+  if (isPrimusProvider(address)) {
+    return PRIMUS_PROVIDER_COLOR;
+  }
+  return COLORS[index % COLORS.length];
 }
 
 function formatTimestamp(unixSeconds) {
@@ -119,9 +142,14 @@ function MetricCard({ label, value, detail, tone = "warm" }) {
 
 function ProviderDetail({ provider, highlighted }) {
   return (
-    <div className={`provider-card ${highlighted ? "provider-card--active" : ""}`}>
+    <div className={`provider-card ${highlighted ? "provider-card--active" : ""} ${isPrimusProvider(provider.provider_address) ? "provider-card--primus" : ""}`}>
       <div className="provider-card__row">
-        <span className="provider-card__kind">{provider.service_kind}</span>
+        <div className="provider-card__tags">
+          <span className="provider-card__kind">{provider.service_kind}</span>
+          {isPrimusProvider(provider.provider_address) ? (
+            <span className="provider-card__owner">Owned by Primus</span>
+          ) : null}
+        </div>
         <span className="provider-card__sync">{provider.tee_signer_acknowledged ? "TEE Ready" : "TEE Pending"}</span>
       </div>
       <div className="provider-card__title">{formatAddress(provider.provider_address)}</div>
@@ -259,12 +287,15 @@ function App() {
       ]);
     }
 
-    const series = [...grouped.values()].map((item, index) => ({
+    const series = [...grouped.values()].map((item, index) => {
+      const seriesColor = getProviderSeriesColor(item.data[0]?.[2], index);
+      return {
       ...item,
-      lineStyle: { width: 3, color: COLORS[index % COLORS.length] },
-      itemStyle: { color: COLORS[index % COLORS.length] },
-      areaStyle: { opacity: 0.08, color: COLORS[index % COLORS.length] }
-    }));
+      lineStyle: { width: isPrimusProvider(item.data[0]?.[2]) ? 4 : 3, color: seriesColor },
+      itemStyle: { color: seriesColor },
+      areaStyle: { opacity: isPrimusProvider(item.data[0]?.[2]) ? 0.16 : 0.08, color: seriesColor }
+    };
+    });
 
     return {
       color: COLORS,
@@ -420,7 +451,7 @@ function App() {
                   <option value="">所有 provider</option>
                   {filteredProviders.map((item) => (
                     <option key={item.provider_address} value={item.provider_address}>
-                      {item.provider_address}
+                      {getProviderOptionLabel(item)}
                     </option>
                   ))}
                 </select>
@@ -480,9 +511,16 @@ function App() {
                 </thead>
                 <tbody>
                   {visibleTopProviders.map((item) => (
-                    <tr key={item.provider_address}>
+                    <tr key={item.provider_address} className={isPrimusProvider(item.provider_address) ? "table-row--primus" : ""}>
                       <td>inference</td>
-                      <td title={item.provider_address}>{formatAddress(item.provider_address)}</td>
+                      <td title={item.provider_address}>
+                        <div className="provider-table__cell">
+                          <span>{formatAddress(item.provider_address)}</span>
+                          {isPrimusProvider(item.provider_address) ? (
+                            <span className="provider-table__owner">Owned by Primus</span>
+                          ) : null}
+                        </div>
+                      </td>
                       <td>{formatWeiToOg(item.total_revenue, 6)}</td>
                       <td>{item.cycle_count}</td>
                       <td>{new Date(Number(item.last_seen) * 1000).toLocaleString()}</td>
