@@ -99,7 +99,7 @@ function useEChart(option) {
       return;
     }
     chartRef.current.setOption(option, {
-      notMerge: false,
+      notMerge: true,
       lazyUpdate: true
     });
   }, [option]);
