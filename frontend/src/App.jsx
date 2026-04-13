@@ -334,7 +334,7 @@ function App() {
           <MetricCard
             label="Tracked Start Block"
             value={status?.dbStatus?.startBlock ?? "-"}
-            detail="首次同步起点，仅初始化 sync_state 时生效"
+            detail="数据起始区块号"
             tone="cool"
           />
           <MetricCard
