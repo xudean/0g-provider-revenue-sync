@@ -96,7 +96,7 @@ async function getProviderRevenueSeries(connection, config, { bucketMinutes, ser
           service_kind,
           provider_address,
           transfer_amount,
-          FLOOR(block_timestamp / ?) * ? AS bucket_unix
+          CEIL(block_timestamp / ?) * ? AS bucket_unix
         FROM settlement_cycles
         WHERE ${conditions.join(" AND ")}
       ) AS bucketed

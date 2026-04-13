@@ -44,8 +44,8 @@ function getProviderDisplayName(provider) {
 }
 
 function formatBucketRange(timestampMs, bucketMinutes) {
-  const start = new Date(timestampMs);
-  const end = new Date(timestampMs + (bucketMinutes * 60 * 1000) - (60 * 1000));
+  const end = new Date(timestampMs);
+  const start = new Date(timestampMs - ((bucketMinutes - 1) * 60 * 1000));
   const formatter = new Intl.DateTimeFormat("zh-CN", {
     hour: "2-digit",
     minute: "2-digit",
