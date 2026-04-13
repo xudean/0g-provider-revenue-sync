@@ -44,12 +44,15 @@ NETWORK=zgMainnet
 
 可选：
 
+- `CONTRACT_DEPLOYMENTS_DIR`: 合约部署 JSON 目录；默认读取当前项目内的 `deployments/`
 - `START_BLOCK`: 首次同步起始块
 - `END_BLOCK`: 截止块，不填则同步到最新块
 - `BLOCK_BATCH_SIZE`: 每批扫块范围，默认 `2000`
 - `SYNC_INTERVAL_MS`: 后台自动同步周期，默认 `10000`
 - `SERVER_PORT`: dashboard 服务端口，默认 `3200`
 - `DEFAULT_BUCKET_MINUTES`: dashboard 默认时间桶，默认 `60`
+- `APP_HOST_PORT`: Docker 映射到宿主机的 dashboard 端口，默认 `3201`
+- `MYSQL_HOST_PORT`: Docker 映射到宿主机的 MySQL 端口，默认 `3307`
 
 ## 安装
 
@@ -120,3 +123,36 @@ Dashboard 页面提供：
 - Top provider 表格
 - 按时间桶聚合的 provider 收益图
 - 手动触发一次即时同步
+
+## Docker
+
+项目已提供：
+
+- `Dockerfile`
+- `docker-compose.yml`
+
+启动前先确认两个条件：
+
+1. `.env` 里至少配置好 `RPC_URL` 和 `NETWORK`
+2. `.env` 如需覆盖 ABI/部署文件目录，可设置 `CONTRACT_DEPLOYMENTS_DIR`
+
+直接启动：
+
+```bash
+docker compose up --build -d
+```
+
+访问：
+
+```bash
+http://127.0.0.1:3201
+```
+
+说明：
+
+- `docker-compose.yml` 会同时启动应用和 `MySQL`
+- 应用容器启动时会自动循环执行 `init-db`，直到 `MySQL` 就绪
+- Compose 内部会把 `MYSQL_HOST` 覆盖成 `mysql`，所以不需要改你本地 `.env`
+- 镜像会直接包含当前项目下的 `deployments/`，不再依赖额外兄弟目录
+- 宿主机默认映射为 `3201 -> app:3200`、`3307 -> mysql:3306`，如有冲突可改 `.env` 中的 `APP_HOST_PORT` 和 `MYSQL_HOST_PORT`
+- `MySQL` 数据保存在命名卷 `mysql_data`

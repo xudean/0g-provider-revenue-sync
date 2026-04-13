@@ -17,11 +17,12 @@ function parseOptionalInt(value, fallback) {
 
 function loadConfig() {
   const network = process.env.NETWORK || "zgTestnetV4";
+  const deploymentsRoot = process.env.CONTRACT_DEPLOYMENTS_DIR || CONTRACT_DEPLOYMENTS_DIR;
 
   return {
     rpcUrl: process.env.RPC_URL,
     network,
-    deploymentDir: path.join(CONTRACT_DEPLOYMENTS_DIR, network),
+    deploymentDir: path.join(deploymentsRoot, network),
     mysql: {
       host: process.env.MYSQL_HOST || "127.0.0.1",
       port: parseOptionalInt(process.env.MYSQL_PORT, 3306),

@@ -1,0 +1,12 @@
+.git
+.idea
+.vscode
+.DS_Store
+.env
+node_modules
+web
+coverage
+dist
+tmp
+temp
+*.log

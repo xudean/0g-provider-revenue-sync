@@ -1,7 +1,7 @@
 const path = require("path");
 
-const ROOT_DIR = path.resolve(__dirname, "..", "..");
-const CONTRACT_DEPLOYMENTS_DIR = path.join(ROOT_DIR, "0g-serving-contract", "deployments");
+const ROOT_DIR = path.resolve(__dirname, "..");
+const CONTRACT_DEPLOYMENTS_DIR = path.join(ROOT_DIR, "deployments");
 
 const SERVICE_KINDS = {
   INFERENCE: "inference",
