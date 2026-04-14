@@ -66,6 +66,27 @@ function getProviderSeriesColor(address, index) {
   return COLORS[index % COLORS.length];
 }
 
+function ChartLegend({ items, activeAddress, onSelect }) {
+  if (!items.length) {
+    return null;
+  }
+  return (
+    <div className="chart-legend" aria-label="Chart legend">
+      {items.map((item) => (
+        <button
+          key={item.address}
+          type="button"
+          className={`chart-legend__item ${activeAddress === item.address ? "chart-legend__item--active" : ""}`}
+          onClick={() => onSelect(activeAddress === item.address ? "" : item.address)}
+        >
+          <span className="chart-legend__swatch" style={{ backgroundColor: item.color }} />
+          <span className="chart-legend__label">{item.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function formatTimestamp(unixSeconds) {
   if (!unixSeconds) {
     return "-";
@@ -198,6 +219,7 @@ function ProviderDetail({ provider, highlighted }) {
 }
 
 function App() {
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const [status, setStatus] = useState(null);
   const [summary, setSummary] = useState(null);
   const [providers, setProviders] = useState([]);
@@ -210,6 +232,12 @@ function App() {
   const [refreshMs, setRefreshMs] = useState(DEFAULT_REFRESH_MS);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const filteredProviders = useMemo(() => {
     return providers.filter((item) => item.service_kind === "inference");
@@ -289,6 +317,7 @@ function App() {
   }, [summary]);
 
   const chartOption = useMemo(() => {
+    const isMobileViewport = viewportWidth <= 720;
     const providerMap = new Map(filteredProviders.map((item) => [item.provider_address, item]));
     const grouped = new Map();
     const bucketStepMs = bucketMinutes * 60 * 1000;
@@ -353,10 +382,23 @@ function App() {
       color: COLORS,
       backgroundColor: "transparent",
       animationDuration: 500,
-      grid: { top: 56, right: 24, bottom: 52, left: 70 },
-      legend: {
+      grid: {
+        top: isMobileViewport ? 32 : 56,
+        right: isMobileViewport ? 12 : 24,
+        bottom: isMobileViewport ? 64 : 52,
+        left: isMobileViewport ? 52 : 70
+      },
+      legend: isMobileViewport ? { show: false } : {
         top: 12,
-        textStyle: { color: "#51463e", fontFamily: "IBM Plex Sans, sans-serif" }
+        left: 8,
+        right: 8,
+        itemWidth: 18,
+        itemHeight: 12,
+        textStyle: {
+          color: "#51463e",
+          fontFamily: "IBM Plex Sans, sans-serif",
+          fontSize: 12
+        }
       },
       tooltip: {
         trigger: "axis",
@@ -392,7 +434,15 @@ function App() {
       },
       series
     };
-  }, [anchorTimeMs, bucketMinutes, filteredProviders, revenueSeries]);
+  }, [anchorTimeMs, bucketMinutes, filteredProviders, revenueSeries, viewportWidth]);
+
+  const chartLegendItems = useMemo(() => {
+    return filteredProviders.map((provider, index) => ({
+      address: provider.provider_address,
+      name: getProviderDisplayName(provider),
+      color: getProviderSeriesColor(provider.provider_address, index)
+    }));
+  }, [filteredProviders]);
 
   const chartRef = useEChart(chartOption);
 
@@ -520,6 +570,13 @@ function App() {
                 </select>
               </div>
             </div>
+            {viewportWidth <= 720 ? (
+              <ChartLegend
+                items={chartLegendItems}
+                activeAddress={providerAddress}
+                onSelect={setProviderAddress}
+              />
+            ) : null}
             <div className="chart-frame">
               <div ref={chartRef} className="chart-canvas" />
             </div>
