@@ -77,6 +77,8 @@ function formatBucketRange(timestampMs, bucketMinutes) {
   const end = new Date(timestampMs);
   const start = new Date(timestampMs - ((bucketMinutes - 1) * 60 * 1000));
   const formatter = new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false
