@@ -63,7 +63,12 @@ function getProviderSeriesColor(address, index) {
   if (isPrimusProvider(address)) {
     return PRIMUS_PROVIDER_COLOR;
   }
-  return COLORS[index % COLORS.length];
+  const normalized = String(address || "").toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i += 1) {
+    hash = ((hash * 31) + normalized.charCodeAt(i)) >>> 0;
+  }
+  return COLORS[hash % COLORS.length];
 }
 
 function ChartLegend({ items, activeAddress, onSelect }) {
@@ -437,12 +442,33 @@ function App() {
   }, [anchorTimeMs, bucketMinutes, filteredProviders, revenueSeries, viewportWidth]);
 
   const chartLegendItems = useMemo(() => {
-    return filteredProviders.map((provider, index) => ({
-      address: provider.provider_address,
-      name: getProviderDisplayName(provider),
-      color: getProviderSeriesColor(provider.provider_address, index)
-    }));
-  }, [filteredProviders]);
+    const providerMap = new Map(filteredProviders.map((item) => [item.provider_address, item]));
+    const seen = new Set();
+    const orderedAddresses = [];
+
+    for (const row of revenueSeries) {
+      if (!seen.has(row.provider_address)) {
+        seen.add(row.provider_address);
+        orderedAddresses.push(row.provider_address);
+      }
+    }
+
+    for (const provider of filteredProviders) {
+      if (!seen.has(provider.provider_address)) {
+        seen.add(provider.provider_address);
+        orderedAddresses.push(provider.provider_address);
+      }
+    }
+
+    return orderedAddresses.map((address, index) => {
+      const provider = providerMap.get(address);
+      return {
+        address,
+        name: getProviderDisplayName(provider),
+        color: getProviderSeriesColor(address, index)
+      };
+    });
+  }, [filteredProviders, revenueSeries]);
 
   const chartRef = useEChart(chartOption);
 
