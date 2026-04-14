@@ -266,6 +266,8 @@ function App() {
   const chartOption = useMemo(() => {
     const providerMap = new Map(filteredProviders.map((item) => [item.provider_address, item]));
     const grouped = new Map();
+    const bucketStepMs = bucketMinutes * 60 * 1000;
+
     for (const row of revenueSeries) {
       const key = row.provider_address;
       const provider = providerMap.get(row.provider_address);
@@ -287,14 +289,33 @@ function App() {
       ]);
     }
 
+    const bucketValues = revenueSeries
+      .map((row) => Number(row.bucket_unix) * 1000)
+      .sort((a, b) => a - b);
+
+    const allBuckets = [];
+    if (bucketValues.length > 0) {
+      for (let bucket = bucketValues[0]; bucket <= bucketValues[bucketValues.length - 1]; bucket += bucketStepMs) {
+        allBuckets.push(bucket);
+      }
+    }
+
     const series = [...grouped.values()].map((item, index) => {
+      const pointMap = new Map(item.data.map(([bucket, value]) => [bucket, value]));
       const seriesColor = getProviderSeriesColor(item.data[0]?.[2], index);
+      const filledData = allBuckets.map((bucket) => [
+        bucket,
+        pointMap.get(bucket) ?? 0,
+        item.data[0]?.[2]
+      ]);
+
       return {
-      ...item,
-      lineStyle: { width: isPrimusProvider(item.data[0]?.[2]) ? 4 : 3, color: seriesColor },
-      itemStyle: { color: seriesColor },
-      areaStyle: { opacity: isPrimusProvider(item.data[0]?.[2]) ? 0.16 : 0.08, color: seriesColor }
-    };
+        ...item,
+        data: filledData,
+        lineStyle: { width: isPrimusProvider(item.data[0]?.[2]) ? 4 : 3, color: seriesColor },
+        itemStyle: { color: seriesColor },
+        areaStyle: { opacity: isPrimusProvider(item.data[0]?.[2]) ? 0.16 : 0.08, color: seriesColor }
+      };
     });
 
     return {
