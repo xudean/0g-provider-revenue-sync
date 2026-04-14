@@ -285,7 +285,8 @@ function App() {
       grouped.get(key).data.push([
         Number(row.bucket_unix) * 1000,
         Number(row.revenue),
-        row.provider_address
+        row.provider_address,
+        Number(row.cycle_count || 0)
       ]);
     }
 
@@ -301,12 +302,16 @@ function App() {
     }
 
     const series = [...grouped.values()].map((item, index) => {
-      const pointMap = new Map(item.data.map(([bucket, value]) => [bucket, value]));
+      const pointMap = new Map(item.data.map(([bucket, value, _addr, cycleCount]) => [
+        bucket,
+        { value, cycleCount }
+      ]));
       const seriesColor = getProviderSeriesColor(item.data[0]?.[2], index);
       const filledData = allBuckets.map((bucket) => [
         bucket,
-        pointMap.get(bucket) ?? 0,
-        item.data[0]?.[2]
+        pointMap.get(bucket)?.value ?? 0,
+        item.data[0]?.[2],
+        pointMap.get(bucket)?.cycleCount ?? 0
       ]);
 
       return {
@@ -334,9 +339,9 @@ function App() {
         textStyle: { color: "#f7f1eb" },
         formatter(params) {
           const lines = params.map((param) => {
-            const [, value, addr] = param.data;
+            const [, value, addr, cycleCount] = param.data;
             const provider = providerMap.get(addr);
-            return `${param.marker}${getProviderDisplayName(provider)}: <strong>${formatWeiToOg(value, 6)}</strong>`;
+            return `${param.marker}${getProviderDisplayName(provider)}: <strong>${formatWeiToOg(value, 6)}</strong> / ${cycleCount} cycles`;
           });
           return [`<div>${formatBucketRange(params[0]?.value?.[0] || 0, bucketMinutes)}</div>`, ...lines].join("<br/>");
         }
