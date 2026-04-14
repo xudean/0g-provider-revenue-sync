@@ -86,6 +86,25 @@ function formatBucketRange(timestampMs, bucketMinutes) {
   return `${formatter.format(start)} - ${formatter.format(end)}`;
 }
 
+function formatAxisTick(timestampMs) {
+  const value = new Date(timestampMs);
+  const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+  const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit"
+  });
+
+  const timeText = timeFormatter.format(value);
+  if (value.getHours() === 0 && value.getMinutes() === 0) {
+    return `${dateFormatter.format(value)}\n${timeText}`;
+  }
+  return timeText;
+}
+
 async function fetchJson(url, options) {
   const response = await fetch(url, options);
   const body = await response.text();
@@ -187,6 +206,7 @@ function App() {
   const [serviceKind] = useState("inference");
   const [providerAddress, setProviderAddress] = useState("");
   const [bucketMinutes, setBucketMinutes] = useState(60);
+  const [anchorTimeMs, setAnchorTimeMs] = useState(() => Math.floor(Date.now() / 60000) * 60000);
   const [refreshMs, setRefreshMs] = useState(DEFAULT_REFRESH_MS);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -220,8 +240,10 @@ function App() {
   async function refresh() {
     setLoading(true);
     try {
+      const anchorTime = Math.floor(Date.now() / 60000) * 60;
       const query = new URLSearchParams();
       query.set("bucketMinutes", String(bucketMinutes));
+      query.set("anchorTime", String(anchorTime));
       if (serviceKind) {
         query.set("serviceKind", serviceKind);
       }
@@ -242,6 +264,7 @@ function App() {
       setProviders(providerData);
       setTopProviders(topData);
       setRevenueSeries(revenueData);
+      setAnchorTimeMs(anchorTime * 1000);
       setRefreshMs(statusData?.dbStatus?.syncIntervalMs || DEFAULT_REFRESH_MS);
       setError("");
     } catch (err) {
@@ -298,7 +321,8 @@ function App() {
 
     const allBuckets = [];
     if (bucketValues.length > 0) {
-      for (let bucket = bucketValues[0]; bucket <= bucketValues[bucketValues.length - 1]; bucket += bucketStepMs) {
+      const lastBucket = Math.max(bucketValues[bucketValues.length - 1], anchorTimeMs);
+      for (let bucket = bucketValues[0]; bucket <= lastBucket; bucket += bucketStepMs) {
         allBuckets.push(bucket);
       }
     }
@@ -350,7 +374,12 @@ function App() {
       },
       xAxis: {
         type: "time",
-        axisLabel: { color: "#6a5f56" },
+        max: anchorTimeMs,
+        axisLabel: {
+          color: "#6a5f56",
+          formatter: (value) => formatAxisTick(value),
+          lineHeight: 18
+        },
         axisLine: { lineStyle: { color: "#b6a79a" } }
       },
       yAxis: {
@@ -363,7 +392,7 @@ function App() {
       },
       series
     };
-  }, [bucketMinutes, filteredProviders, revenueSeries]);
+  }, [anchorTimeMs, bucketMinutes, filteredProviders, revenueSeries]);
 
   const chartRef = useEChart(chartOption);
 

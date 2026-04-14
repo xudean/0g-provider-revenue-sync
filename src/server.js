@@ -91,7 +91,8 @@ async function main() {
       const data = await getProviderRevenueSeries(connection, config, {
         bucketMinutes: Number.isNaN(bucketMinutes) ? config.server.defaultBucketMinutes : bucketMinutes,
         serviceKind: req.query.serviceKind ? String(req.query.serviceKind) : null,
-        providerAddress: req.query.providerAddress ? String(req.query.providerAddress) : null
+        providerAddress: req.query.providerAddress ? String(req.query.providerAddress) : null,
+        anchorTime: req.query.anchorTime ? Number.parseInt(String(req.query.anchorTime), 10) : null
       });
       res.json(data);
     } finally {

@@ -60,7 +60,7 @@ async function listProviders(connection, config) {
   );
 }
 
-async function getProviderRevenueSeries(connection, config, { bucketMinutes, serviceKind, providerAddress }) {
+async function getProviderRevenueSeries(connection, config, { bucketMinutes, serviceKind, providerAddress, anchorTime }) {
   const conditions = ["network = ?"];
   const params = [config.network];
 
@@ -75,6 +75,10 @@ async function getProviderRevenueSeries(connection, config, { bucketMinutes, ser
   }
 
   const bucketSeconds = Math.max(60, bucketMinutes * 60);
+  const normalizedAnchorTime = Number.isInteger(anchorTime) && anchorTime > 0
+    ? anchorTime
+    : Math.floor(Date.now() / 1000);
+  const bucketOffsetSeconds = ((normalizedAnchorTime % bucketSeconds) + bucketSeconds) % bucketSeconds;
 
   const sql = `
     SELECT
@@ -96,7 +100,7 @@ async function getProviderRevenueSeries(connection, config, { bucketMinutes, ser
           service_kind,
           provider_address,
           transfer_amount,
-          CEIL(block_timestamp / ?) * ? AS bucket_unix
+          CEIL((block_timestamp - ?) / ?) * ? + ? AS bucket_unix
         FROM settlement_cycles
         WHERE ${conditions.join(" AND ")}
       ) AS bucketed
@@ -109,8 +113,10 @@ async function getProviderRevenueSeries(connection, config, { bucketMinutes, ser
   `;
 
   return query(connection, sql, [
+    bucketOffsetSeconds,
     bucketSeconds,
     bucketSeconds,
+    bucketOffsetSeconds,
     ...params
   ]);
 }
