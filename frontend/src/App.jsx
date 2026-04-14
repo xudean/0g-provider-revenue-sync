@@ -644,6 +644,7 @@ function App() {
                   <tr>
                     <th>Kind</th>
                     <th>Address</th>
+                    <th>Model</th>
                     <th>Total Revenue</th>
                     <th>Cycles</th>
                     <th>Last Seen</th>
@@ -661,6 +662,7 @@ function App() {
                           ) : null}
                         </div>
                       </td>
+                      <td>{item.model_name || "-"}</td>
                       <td>{formatWeiToOg(item.total_revenue, 6)}</td>
                       <td>{item.cycle_count}</td>
                       <td>{new Date(Number(item.last_seen) * 1000).toLocaleString()}</td>

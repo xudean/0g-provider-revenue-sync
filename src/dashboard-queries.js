@@ -126,18 +126,32 @@ async function getTopProviders(connection, config, limit = 20) {
   return query(
     connection,
     `SELECT
-       service_kind,
-       provider_address,
-       CAST(COALESCE(SUM(CAST(transfer_amount AS DECIMAL(65,0))), 0) AS CHAR) AS total_revenue,
-       COUNT(*) AS cycle_count,
-       MIN(block_timestamp) AS first_seen,
-       MAX(block_timestamp) AS last_seen
-     FROM settlement_cycles
-     WHERE network = ?
-     GROUP BY service_kind, provider_address
-     ORDER BY CAST(total_revenue AS DECIMAL(65,0)) DESC
+       ranked.service_kind,
+       ranked.provider_address,
+       providers.model_name,
+       ranked.total_revenue,
+       ranked.cycle_count,
+       ranked.first_seen,
+       ranked.last_seen
+     FROM (
+       SELECT
+         service_kind,
+         provider_address,
+         CAST(COALESCE(SUM(CAST(transfer_amount AS DECIMAL(65,0))), 0) AS CHAR) AS total_revenue,
+         COUNT(*) AS cycle_count,
+         MIN(block_timestamp) AS first_seen,
+         MAX(block_timestamp) AS last_seen
+       FROM settlement_cycles
+       WHERE network = ?
+       GROUP BY service_kind, provider_address
+     ) AS ranked
+     LEFT JOIN providers
+       ON providers.network = ?
+      AND providers.service_kind = ranked.service_kind
+      AND providers.provider_address = ranked.provider_address
+     ORDER BY CAST(ranked.total_revenue AS DECIMAL(65,0)) DESC
      LIMIT ${safeLimit}`,
-    [config.network]
+    [config.network, config.network]
   );
 }
 
